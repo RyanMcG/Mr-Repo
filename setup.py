@@ -10,7 +10,7 @@ setup(name='Mr-Repo',
       author_email='ryan@ryanmcg.com',
       description='A very simple repo manager of repos.',
       long_description=long_description,
-      url='http://packages.python.org/Mr-Repo',
+      url='http://pypi.python.org/pypi/Mr-Repo/' + version,
       py_modules=['mr_repo'],
       requires=['PyYAML']
       )
