@@ -27,7 +27,7 @@ class MrRepo(object):
                 description='Mr. Repo is a very simple repo manager of repos.',
                 epilog='See the README (https://github.com/RyanMcG/Mr-Repo)' \
                         'for more information.'
-                )
+                        )
         self._command_term = 'command'
         self.__setup_parser()
         self._config_file_name = config_file
@@ -63,8 +63,8 @@ class MrRepo(object):
                 description=dedent(self.init_command.__doc__))
         init_parser.add_argument('--clean', '-c', dest='clean',
                 action='store_true', default=False, help='ignore current ' \
-                'state of directory being initiliazed as a repo and create ' \
-                'a blank repo')
+                        'state of directory being initiliazed as a repo and ' \
+                        'create a blank repo')
         init_parser.set_defaults(func=self.init_command)
 
         #Parsing for `list` command
