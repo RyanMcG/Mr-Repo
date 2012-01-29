@@ -3,9 +3,36 @@
 # Author: Ryan McGowan
 version = "0.1.0"
 
-from argparse import ArgumentParser, SUPPRESS, RawDescriptionHelpFormatter
+from argparse import (ArgumentParser, SUPPRESS, RawDescriptionHelpFormatter,
+        Action, ArgumentTypeError)
 from textwrap import dedent
-from yaml import load
+from os import path
+import git
+import yaml
+
+
+class MrRepoDirAction(Action):
+    """Action to be called on dir arg for mr repo."""
+
+    @classmethod
+    def check_dir(this, adir, config_file_name, is_init):
+        apath = path.abspath(adir)
+        if not path.isdir(apath):
+            raise ArgumentTypeError("ERROR: %s is not a directory." % apath)
+
+        if not is_init:
+            if not path.isfile(path.join(apath, config_file_name)):
+                raise ArgumentTypeError("ERROR: %s is not a Mr. Repo repo." %
+                        apath)
+        return apath
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        #print("%r %r %r" % (namespace, values, option_string))
+        apath = MrRepoDirAction.check_dir(values, parser._config_file_name,
+                namespace.command == 'init')
+
+        setattr(namespace, self.dest, apath)
+        print(namespace)
 
 
 class MrRepo(object):
@@ -20,32 +47,53 @@ class MrRepo(object):
     def __init__(self, prog='mr_repo', args=None, execute=False,
             config_file=".mr_repo.yml", repo_file='.this_repo'):
         self.version = version
+        self.config = {'repos': {}}
+        self._command_term = 'command'
+        self._config_file_name = config_file
+        self._repo_file_name = repo_file
+
+        #Setup parser
         self.parser = ArgumentParser(
                 prog=prog,
                 formatter_class=RawDescriptionHelpFormatter,
                 conflict_handler='resolve',
                 description='Mr. Repo is a very simple repo manager of repos.',
                 epilog='See the README (https://github.com/RyanMcG/Mr-Repo)' \
-                        'for more information.'
-                        )
-        self._command_term = 'command'
+                        'for more information.')
         self.__setup_parser()
-        self._config_file_name = config_file
-        self._repo_file_name = repo_file
 
         # Run parse_args on passed in args if available
         if isinstance(args, list):
             self.parse_args(args)
+
+            # Read config
+            self.setup_files()
+            if not self.is_init:
+                self.read_config()
+
         # Optionally execute the sub-command automatically
         if execute:
-            self.execute()
+            result = self.execute()
+            if isinstance(result, str):
+                print(result)
 
-    def _read_config_files(self):
+    def setup_files(self):
+        config_path = path.join(self.args.dir, self._config_file_name)
+        repo_file_path = path.join(self.args.dir, self._repo_file_name)
+        if path.isfile(config_path):
+            self.config_file = file(config_path, 'w+')
+        else:
+            self.config_file = file(config_path, 'w')
+        if path.isfile(repo_file_path):
+            self.repo_file = file(repo_file_path, 'w+')
+        else:
+            self.repo_file = file(repo_file_path, 'w')
+
+    def read_config(self):
         """Read `.mr_repo.yml` and `.this_repo` files to determine state the of
         the repository."""
-        config = load(self._config_file_name)
-        self.repos = config['repos']
-        # TODO: Fill this out
+        self.config = yaml.load(self.config_file)
+        self.repos = self.repo_file.readlines()
 
     def __setup_parser(self):
         self.parser.add_argument('--version', action='version',
@@ -86,36 +134,82 @@ class MrRepo(object):
         # Parser for `add` command
         add_parser = subparsers.add_parser('add',
                 description=dedent(self.add_command.__doc__))
+        add_parser.add_argument('path', help='Path to the repository being ' \
+                'put under Mr. Repo control', type=self.__path)
         add_parser.set_defaults(func=self.add_command)
         # Parser for `rm` command
         rm_parser = subparsers.add_parser('rm',
                 description=dedent(self.rm_command.__doc__))
+        rm_parser.add_argument('name', help='Name of the repository being ' \
+                'removed from Mr. Repo control')
         rm_parser.set_defaults(func=self.rm_command)
         # Parser for `get` command
         get_parser = subparsers.add_parser('get',
                 description=dedent(self.get_command.__doc__))
+        get_parser.add_argument('name', help='Name of the repository being ' \
+                'pulled into the local  Mr. Repo repo')
         get_parser.set_defaults(func=self.get_command)
 
         # Parser for `unget` command
         unget_parser = subparsers.add_parser('unget',
                 description=dedent(self.unget_command.__doc__))
         unget_parser.add_argument('--force', '-f', dest='force',
-                action='store_true', default=False, help='Force removal of' \
+                action='store_true', default=False, help='Force removal of ' \
                         'repository even if it contains uncommitted changes.')
+        unget_parser.add_argument('name', help='Name of the repository ' \
+                'being removed from the local Mr. Repo repo')
         unget_parser.set_defaults(func=self.unget_command)
 
+        for sp in subparsers.choices.values():
+            sp._config_file_name = self._config_file_name
+            sp.add_argument('--dir', '-d', dest="dir", default='.',
+                    help='The Mr. Repo directory being worked on.',
+                    action=MrRepoDirAction)
+
     def parse_args(self, args):
-        self.args = self.parser.parse_args(args)
+        try:
+            self.args = self.parser.parse_args(args)
+            self.is_init = self.args.command == 'init'
+            if self.args.dir == '.':
+                self.args.dir = MrRepoDirAction.check_dir(self.args.dir,
+                        self._config_file_name, self.is_init)
+        except ArgumentTypeError as inst:
+            print(inst.message)
+            self.print_help()
+            exit(2)
+
+    def __path(self, spath, chg_path=True):
+        extra = " so it cannot be added to Mr. Repo."
+        apath = path.abspath(spath)
+        if not path.isdir(apath):
+            raise ArgumentTypeError("%s is not a directory" % spath + extra)
+        if self._get_repo() == None:
+            raise ArgumentTypeError("%s is not valid repository" % spath +
+                    extra)
+        return apath
+
+    def _get_repo(self, apath):
+        try:
+            repo = git.Repo(apath)
+        except:
+            return None
+        return repo
 
     def print_help(self):
         self.parser.print_help()
 
     def execute(self):
         if callable(self.args.func):
-            self.args.func()
+            result = self.args.func()
         else:
             print("INTERNAL ERROR: Couldn't parse arguments!")
             self.print_help()
+        #Close files after execution
+        if hasattr(self, 'config_file') and isinstance(self.config_file, file):
+            self.config_file.close()
+        if hasattr(self, 'repo_file') and isinstance(self.repo_file, file):
+            self.repo_file.close()
+        return result
 
     # Mr. Repo Commands
 
@@ -127,12 +221,14 @@ class MrRepo(object):
         repositories and adds them to the tracking files.  This feature can be
         overridden with the `--clean` option.'
         """
-        print(self.args.command)
+        if not self.args.clean:
+            self.update_command()
+        yaml.dump(self.config, self.config_file)
+        return "Successfully initalized Mr. Repo at '%s'." % self.args.dir
 
     def add_command(self):
         """Add a definition of a local repository to the Mr. Repo
         repository."""
-        print(self.args.command)
 
     def rm_command(self):
         """Remove a definition of a local repository from the Mr. Repo
