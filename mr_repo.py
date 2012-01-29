@@ -16,7 +16,7 @@ class MrRepoDirAction(Action):
 
     @classmethod
     def check_dir(this, adir, config_file_name, is_init):
-        apath = path.abspath(adir)
+        apath = path.abspath(path.normpath(adir))
         if not path.isdir(apath):
             raise ArgumentTypeError("ERROR: %s is not a directory." % apath)
 
@@ -48,6 +48,7 @@ class MrRepo(object):
             config_file=".mr_repo.yml", repo_file='.this_repo'):
         self.version = version
         self.config = {'repos': {}}
+        self.repos = []
         self._command_term = 'command'
         self._config_file_name = config_file
         self._repo_file_name = repo_file
@@ -81,11 +82,11 @@ class MrRepo(object):
         config_path = path.join(self.args.dir, self._config_file_name)
         repo_file_path = path.join(self.args.dir, self._repo_file_name)
         if path.isfile(config_path):
-            self.config_file = file(config_path, 'w+')
+            self.config_file = file(config_path, 'r+')
         else:
             self.config_file = file(config_path, 'w')
         if path.isfile(repo_file_path):
-            self.repo_file = file(repo_file_path, 'w+')
+            self.repo_file = file(repo_file_path, 'r+')
         else:
             self.repo_file = file(repo_file_path, 'w')
 
@@ -93,7 +94,8 @@ class MrRepo(object):
         """Read `.mr_repo.yml` and `.this_repo` files to determine state the of
         the repository."""
         self.config = yaml.load(self.config_file)
-        self.repos = self.repo_file.readlines()
+        self.repos = filter(self.__repo, [repo.rstrip() for repo in
+            self.repo_file.readlines()])
 
     def __setup_parser(self):
         self.parser.add_argument('--version', action='version',
@@ -111,7 +113,7 @@ class MrRepo(object):
                 description=dedent(self.init_command.__doc__))
         init_parser.add_argument('--clean', '-c', dest='clean',
                 action='store_true', default=False, help='ignore current ' \
-                        'state of directory being initiliazed as a repo and ' \
+                        'state of directory being initialized as a repo and ' \
                         'create a blank repo')
         init_parser.set_defaults(func=self.init_command)
 
@@ -178,15 +180,24 @@ class MrRepo(object):
             self.print_help()
             exit(2)
 
-    def __path(self, spath, chg_path=True):
+    def __path(self, spath):
         extra = " so it cannot be added to Mr. Repo."
-        apath = path.abspath(spath)
-        if not path.isdir(apath):
-            raise ArgumentTypeError("%s is not a directory" % spath + extra)
-        if self._get_repo() == None:
-            raise ArgumentTypeError("%s is not valid repository" % spath +
-                    extra)
+        try:
+            apath = path.abspath(path.normpath(spath))
+            if not path.isdir(apath):
+                raise ArgumentTypeError("%s is not a directory" % spath +
+                        extra)
+            if self._get_repo(apath) == None:
+                raise ArgumentTypeError("%s is not valid repository" % spath +
+                        extra)
+        except Exception as inst:
+            print("ERROR: " + inst.message)
+
         return apath
+
+    def __repo(self, repo_str):
+        """Function returns true if repo_str is a Mr. Repo controlled repo."""
+        return repo_str in self.config.get('repos').keys()
 
     def _get_repo(self, apath):
         try:
@@ -223,12 +234,42 @@ class MrRepo(object):
         """
         if not self.args.clean:
             self.update_command()
+        self.__write_files()
+        return "Successfully initialized Mr. Repo at '%s'." % self.args.dir
+
+    def __write_files(self):
+        """Write config to config file."""
+        # Delete contents of files
+        self.config_file.seek(0)
+        self.config_file.truncate()
+        self.repo_file.seek(0)
+        self.repo_file.truncate()
+
+        # Write contents to files
         yaml.dump(self.config, self.config_file)
-        return "Successfully initalized Mr. Repo at '%s'." % self.args.dir
+        self.repo_file.write('\n'.join(self.repos))
+        if len(self.repos) > 0:
+            self.repo_file.write('\n')
 
     def add_command(self):
         """Add a definition of a local repository to the Mr. Repo
         repository."""
+        repo_name = path.basename(self.args.path)
+        if not self.__repo(repo_name):
+            rep = self._get_repo(self.args.path)
+            if rep != None:
+                self.repos.append(path.basename(self.args.path))
+                self.config.get('repos').update({repo_name: {'type': 'git',
+                    'remote': rep.remote().url}})
+                self.__write_files()
+                result = "Successfully added %s to Mr. Repo." % repo_name
+            else:
+                result = "ERROR: %s is not a not a supported repository." % \
+                        self.args.path
+        else:
+            result = ("ERROR: %s already in %s (i.e. controlled by Mr. "
+                    "Repo).") % (repo_name, self._config_file_name)
+        return result
 
     def rm_command(self):
         """Remove a definition of a local repository from the Mr. Repo
