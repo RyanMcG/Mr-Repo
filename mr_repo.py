@@ -78,24 +78,7 @@ class MrRepo(object):
             if isinstance(result, str):
                 print(result)
 
-    def setup_files(self):
-        config_path = path.join(self.args.dir, self._config_file_name)
-        repo_file_path = path.join(self.args.dir, self._repo_file_name)
-        if path.isfile(config_path):
-            self.config_file = file(config_path, 'r+')
-        else:
-            self.config_file = file(config_path, 'w')
-        if path.isfile(repo_file_path):
-            self.repo_file = file(repo_file_path, 'r+')
-        else:
-            self.repo_file = file(repo_file_path, 'w')
-
-    def read_config(self):
-        """Read `.mr_repo.yml` and `.this_repo` files to determine state the of
-        the repository."""
-        self.config = yaml.load(self.config_file)
-        self.repos = filter(self.__repo, [repo.rstrip() for repo in
-            self.repo_file.readlines()])
+    # Private Functions
 
     def __setup_parser(self):
         self.parser.add_argument('--version', action='version',
@@ -168,18 +151,6 @@ class MrRepo(object):
                     help='The Mr. Repo directory being worked on.',
                     action=MrRepoDirAction)
 
-    def parse_args(self, args):
-        try:
-            self.args = self.parser.parse_args(args)
-            self.is_init = self.args.command == 'init'
-            if self.args.dir == '.':
-                self.args.dir = MrRepoDirAction.check_dir(self.args.dir,
-                        self._config_file_name, self.is_init)
-        except ArgumentTypeError as inst:
-            print(inst.message)
-            self.print_help()
-            exit(2)
-
     def __path(self, spath):
         extra = " so it cannot be added to Mr. Repo."
         try:
@@ -199,12 +170,47 @@ class MrRepo(object):
         """Function returns true if repo_str is a Mr. Repo controlled repo."""
         return repo_str in self.config.get('repos').keys()
 
+    #Pseudo Private Functions
+
     def _get_repo(self, apath):
         try:
             repo = git.Repo(apath)
         except:
             return None
         return repo
+
+    #Public Functions
+
+    def setup_files(self):
+        config_path = path.join(self.args.dir, self._config_file_name)
+        repo_file_path = path.join(self.args.dir, self._repo_file_name)
+        if path.isfile(config_path):
+            self.config_file = file(config_path, 'r+')
+        else:
+            self.config_file = file(config_path, 'w')
+        if path.isfile(repo_file_path):
+            self.repo_file = file(repo_file_path, 'r+')
+        else:
+            self.repo_file = file(repo_file_path, 'w')
+
+    def read_config(self):
+        """Read `.mr_repo.yml` and `.this_repo` files to determine state the of
+        the repository."""
+        self.config = yaml.load(self.config_file)
+        self.repos = filter(self.__repo, [repo.rstrip() for repo in
+            self.repo_file.readlines()])
+
+    def parse_args(self, args):
+        try:
+            self.args = self.parser.parse_args(args)
+            self.is_init = self.args.command == 'init'
+            if self.args.dir == '.':
+                self.args.dir = MrRepoDirAction.check_dir(self.args.dir,
+                        self._config_file_name, self.is_init)
+        except ArgumentTypeError as inst:
+            print(inst.message)
+            self.print_help()
+            exit(2)
 
     def print_help(self):
         self.parser.print_help()
