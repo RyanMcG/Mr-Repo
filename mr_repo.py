@@ -215,17 +215,19 @@ class MrRepo(object):
     def print_help(self):
         self.parser.print_help()
 
-    def execute(self):
+    def execute(self, close=True):
         if callable(self.args.func):
             result = self.args.func()
         else:
             print("INTERNAL ERROR: Couldn't parse arguments!")
             self.print_help()
         #Close files after execution
-        if hasattr(self, 'config_file') and isinstance(self.config_file, file):
-            self.config_file.close()
-        if hasattr(self, 'repo_file') and isinstance(self.repo_file, file):
-            self.repo_file.close()
+        if close:
+            if hasattr(self, 'config_file') and isinstance(self.config_file,
+                    file):
+                self.config_file.close()
+            if hasattr(self, 'repo_file') and isinstance(self.repo_file, file):
+                self.repo_file.close()
         return result
 
     # Mr. Repo Commands
@@ -265,8 +267,12 @@ class MrRepo(object):
             rep = self._get_repo(self.args.path)
             if rep != None:
                 self.repos.append(path.basename(self.args.path))
-                self.config.get('repos').update({repo_name: {'type': 'git',
-                    'remote': rep.remote().url}})
+                if len(rep.remotes) > 0:
+                    repo_dict = {repo_name: {'type': 'git',
+                        'remote': rep.remote().url}}
+                else:
+                    repo_dict = {repo_name: {'type': 'git'}}
+                self.config.get('repos').update(repo_dict)
                 self.__write_files()
                 result = "Successfully added %s to Mr. Repo." % repo_name
             else:
