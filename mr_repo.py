@@ -182,16 +182,16 @@ class MrRepo(object):
     #Public Functions
 
     def setup_files(self):
-        config_path = path.join(self.args.dir, self._config_file_name)
-        repo_file_path = path.join(self.args.dir, self._repo_file_name)
-        if path.isfile(config_path):
-            self.config_file = file(config_path, 'r+')
+        self.config_path = path.join(self.args.dir, self._config_file_name)
+        self.repo_file_path = path.join(self.args.dir, self._repo_file_name)
+        if path.isfile(self.config_path):
+            self.config_file = file(self.config_path, 'r+')
         else:
-            self.config_file = file(config_path, 'w')
-        if path.isfile(repo_file_path):
-            self.repo_file = file(repo_file_path, 'r+')
+            self.config_file = file(self.config_path, 'w')
+        if path.isfile(self.repo_file_path):
+            self.repo_file = file(self.repo_file_path, 'r+')
         else:
-            self.repo_file = file(repo_file_path, 'w')
+            self.repo_file = file(self.repo_file_path, 'w')
 
     def read_config(self):
         """Read `.mr_repo.yml` and `.this_repo` files to determine state the of
