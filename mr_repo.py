@@ -1,5 +1,5 @@
-#!/usr/bin/env python
-# Mr. Repo - A very simple repo manager of repos.
+#!/usr/bin/env python2
+"""Mr. Repo - A very simple reposoitory for managing other repositories."""
 # Author: Ryan McGowan
 version = "0.1.0"
 
@@ -27,12 +27,10 @@ class MrRepoDirAction(Action):
         return apath
 
     def __call__(self, parser, namespace, values, option_string=None):
-        #print("%r %r %r" % (namespace, values, option_string))
         apath = MrRepoDirAction.check_dir(values, parser._config_file_name,
                 namespace.command == 'init')
 
         setattr(namespace, self.dest, apath)
-        print(namespace)
 
 
 class MrRepo(object):
@@ -44,8 +42,8 @@ class MrRepo(object):
     management.
     """
 
-    def __init__(self, prog='mr_repo', args=None, execute=False,
-            config_file=".mr_repo.yml", repo_file='.this_repo'):
+    def __init__(self, prog='mr_repo', args=None, execute=False, quiet=False,
+            config_file=".mr_repo.yml", repo_file='.this_repo', one_use=False):
         self.version = version
         self.config = {'repos': {}}
         self.repos = []
@@ -59,7 +57,7 @@ class MrRepo(object):
                 formatter_class=RawDescriptionHelpFormatter,
                 conflict_handler='resolve',
                 description='Mr. Repo is a very simple repo manager of repos.',
-                epilog='See the README (https://github.com/RyanMcG/Mr-Repo)' \
+                epilog='See the README (https://github.com/RyanMcG/Mr-Repo) ' \
                         'for more information.')
         self.__setup_parser()
 
@@ -75,10 +73,13 @@ class MrRepo(object):
         # Optionally execute the sub-command automatically
         if execute:
             result = self.execute()
-            if isinstance(result, str):
+            if isinstance(result, str) and not quiet:
                 print(result)
 
-    # Private Functions
+        if one_use:
+            self.close()
+
+    # Private functions
 
     def __setup_parser(self):
         self.parser.add_argument('--version', action='version',
@@ -170,7 +171,7 @@ class MrRepo(object):
         """Function returns true if repo_str is a Mr. Repo controlled repo."""
         return repo_str in self.config.get('repos').keys()
 
-    #Pseudo Private Functions
+    # Pseudo private functions
 
     def _get_repo(self, apath):
         try:
@@ -179,26 +180,40 @@ class MrRepo(object):
             return None
         return repo
 
-    #Public Functions
+    # Public functions
 
     def setup_files(self):
         self.config_path = path.join(self.args.dir, self._config_file_name)
         self.repo_file_path = path.join(self.args.dir, self._repo_file_name)
-        if path.isfile(self.config_path):
-            self.config_file = file(self.config_path, 'r+')
-        else:
+        if not path.isfile(self.config_path):
             self.config_file = file(self.config_path, 'w')
-        if path.isfile(self.repo_file_path):
-            self.repo_file = file(self.repo_file_path, 'r+')
-        else:
+        self.config_file = file(self.config_path, 'r+')
+        if not path.isfile(self.repo_file_path):
             self.repo_file = file(self.repo_file_path, 'w')
+        self.repo_file = file(self.repo_file_path, 'r+')
 
     def read_config(self):
         """Read `.mr_repo.yml` and `.this_repo` files to determine state the of
         the repository."""
+        self.config_file.seek(0)
         self.config = yaml.load(self.config_file)
+        self.repo_file.seek(0)
         self.repos = filter(self.__repo, [repo.rstrip() for repo in
             self.repo_file.readlines()])
+
+    def write_config(self):
+        """Write config to config file."""
+        # Delete contents of files
+        self.config_file.seek(0)
+        self.config_file.truncate()
+        self.repo_file.seek(0)
+        self.repo_file.truncate()
+
+        # Write contents to files
+        yaml.dump(self.config, self.config_file)
+        self.repo_file.write('\n'.join(self.repos))
+        if len(self.repos) > 0:
+            self.repo_file.write('\n')
 
     def parse_args(self, args):
         try:
@@ -215,20 +230,21 @@ class MrRepo(object):
     def print_help(self):
         self.parser.print_help()
 
-    def execute(self, close=True):
+    def execute(self):
         if callable(self.args.func):
             result = self.args.func()
         else:
             print("INTERNAL ERROR: Couldn't parse arguments!")
             self.print_help()
-        #Close files after execution
-        if close:
-            if hasattr(self, 'config_file') and isinstance(self.config_file,
-                    file):
-                self.config_file.close()
-            if hasattr(self, 'repo_file') and isinstance(self.repo_file, file):
-                self.repo_file.close()
         return result
+
+    def close(self):
+        """Close the config files."""
+        if hasattr(self, 'config_file') and isinstance(self.config_file,
+                file):
+            self.config_file.close()
+        if hasattr(self, 'repo_file') and isinstance(self.repo_file, file):
+            self.repo_file.close()
 
     # Mr. Repo Commands
 
@@ -242,22 +258,8 @@ class MrRepo(object):
         """
         if not self.args.clean:
             self.update_command()
-        self.__write_files()
+        self.write_config()
         return "Successfully initialized Mr. Repo at '%s'." % self.args.dir
-
-    def __write_files(self):
-        """Write config to config file."""
-        # Delete contents of files
-        self.config_file.seek(0)
-        self.config_file.truncate()
-        self.repo_file.seek(0)
-        self.repo_file.truncate()
-
-        # Write contents to files
-        yaml.dump(self.config, self.config_file)
-        self.repo_file.write('\n'.join(self.repos))
-        if len(self.repos) > 0:
-            self.repo_file.write('\n')
 
     def add_command(self):
         """Add a definition of a local repository to the Mr. Repo
@@ -273,8 +275,8 @@ class MrRepo(object):
                 else:
                     repo_dict = {repo_name: {'type': 'git'}}
                 self.config.get('repos').update(repo_dict)
-                self.__write_files()
-                result = "Successfully added %s to Mr. Repo." % repo_name
+                self.write_config()
+                result = "Successfully added '%s' to Mr. Repo." % repo_name
             else:
                 result = "ERROR: %s is not a not a supported repository." % \
                         self.args.path
@@ -286,7 +288,7 @@ class MrRepo(object):
     def rm_command(self):
         """Remove a definition of a local repository from the Mr. Repo
         repository."""
-        print(self.args.command)
+        pass
 
     def list_command(self):
         """
@@ -296,21 +298,21 @@ class MrRepo(object):
         Command line flags ([-a | -all] or [-n | --not-available]) may be used
         to specify which Mr. Repo repositories are listed.
         """
-        print(self.args.command)
+        pass
 
     def get_command(self):
         """Get a repository from the defined in the Mr. Repo repository."""
-        print(self.args.command)
+        pass
 
     def unget_command(self):
         """Remove a repository defined in the Mr. Repo repository from the
         local system."""
-        print(self.args.command)
+        pass
 
     def update_command(self):
         """Interprets Mr. Repo controlled directory and automatically updates
         tracking files based on its findings."""
-        print(self.args.command)
+        pass
 
 if __name__ == '__main__':
     from sys import argv
@@ -323,4 +325,4 @@ if __name__ == '__main__':
                 flags=re.IGNORECASE):
             prog = "mr_repo"
     #Create an instance of MrRepo
-    repomr = MrRepo(prog=prog, args=argv, execute=True)
+    repomr = MrRepo(prog=prog, args=argv, execute=True, one_use=True)
