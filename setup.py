@@ -13,7 +13,7 @@ setup(name='Mr-Repo',
       url='http://pypi.python.org/pypi/Mr-Repo/' + version,
       py_modules=['mr_repo'],
       scripts=['mr_repo'],
-      requires=['PyYAML'],
+      requires=['PyYAML', 'GitPython'],
       classifiers=['Development Status :: 4 - Beta',
           'Programming Language :: Python',
           'Programming Language :: Python :: 2']

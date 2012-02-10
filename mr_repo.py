@@ -1,6 +1,6 @@
 """Mr. Repo - A very simple reposoitory for managing other repositories."""
 # Author: Ryan McGowan
-version = "0.2.1"
+version = "0.2.2"
 
 from argparse import (ArgumentParser, SUPPRESS, RawDescriptionHelpFormatter,
         Action, ArgumentTypeError)
