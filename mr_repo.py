@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Mr. Repo - A very simple reposoitory for managing other repositories."""
 # Author: Ryan McGowan
-version = "0.2.0"
+version = "0.2.1"
 
 from argparse import (ArgumentParser, SUPPRESS, RawDescriptionHelpFormatter,
         Action, ArgumentTypeError)

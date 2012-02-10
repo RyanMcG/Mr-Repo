@@ -12,5 +12,8 @@ setup(name='Mr-Repo',
       long_description=long_description,
       url='http://pypi.python.org/pypi/Mr-Repo/' + version,
       py_modules=['mr_repo'],
-      requires=['PyYAML']
+      requires=['PyYAML'],
+      classifiers=['Development Status :: 4 - Beta',
+          'Programming Language :: Python',
+          'Programming Language :: Python :: 2']
       )
