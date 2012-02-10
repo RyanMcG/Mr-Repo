@@ -1,13 +1,14 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 """Mr. Repo - A very simple reposoitory for managing other repositories."""
 # Author: Ryan McGowan
-version = "0.1.0"
+version = "0.2.0"
 
 from argparse import (ArgumentParser, SUPPRESS, RawDescriptionHelpFormatter,
         Action, ArgumentTypeError)
 from textwrap import dedent
 from os import path
 import git
+import shutil
 import yaml
 
 
@@ -106,8 +107,8 @@ class MrRepo(object):
                 formatter_class=RawDescriptionHelpFormatter,
                 description=dedent(self.list_command.__doc__))
         mutex_list_args = list_parser.add_mutually_exclusive_group()
-        # --not-available Just show currently unavailable repos
-        mutex_list_args.add_argument('--not-available', '-n',
+        # --unavailable Just show currently unavailable repos
+        mutex_list_args.add_argument('--unavailable', '-u',
                 dest='unavailable', action='store_true', default=SUPPRESS,
                 help='list only currently unavailable repos.')
         # --all to show all repos (currently available or not)
@@ -270,10 +271,10 @@ class MrRepo(object):
             if rep != None:
                 self.repos.append(path.basename(self.args.path))
                 if len(rep.remotes) > 0:
-                    repo_dict = {repo_name: {'type': 'git',
+                    repo_dict = {repo_name: {'type': 'Git',
                         'remote': rep.remote().url}}
                 else:
-                    repo_dict = {repo_name: {'type': 'git'}}
+                    repo_dict = {repo_name: {'type': 'Git'}}
                 self.config.get('repos').update(repo_dict)
                 self.write_config()
                 result = "Successfully added '%s' to Mr. Repo." % repo_name
@@ -287,27 +288,102 @@ class MrRepo(object):
 
     def rm_command(self):
         """Remove a definition of a local repository from the Mr. Repo
-        repository."""
-        pass
+        repository. Nothing is removed from the filesystem (use `unget` for
+        that."""
+        name = self.args.name
+
+        if name in self.config['repos'].keys():
+            self.config['repos'].pop(name)
+            if name in self.repos:
+                self.repos.remove(name)
+            ret = "Successfully remove '%s' from Mr. Repo control."
+            self.write_config()
+        else:
+            ret = "ERROR: '%s' is not a Mr. Repo controlled repository." % name
+
+        return ret
 
     def list_command(self):
         """
         List Mr. Repo repositories.
 
         Lists Mr. Repo repositories that are currently available by default.
-        Command line flags ([-a | -all] or [-n | --not-available]) may be used
+        Command line flags ([-a | -all] or [-u | --unavailable]) may be used
         to specify which Mr. Repo repositories are listed.
         """
-        pass
+        repos = self.config['repos']
+
+        # Filter down all repos if we do not have the all flag or were given
+        # the unavailable flag.
+        if hasattr(self.args, 'unavailable') and self.args.unavailable:
+            # Unavailable means it is in the config, but not in self.repos.
+            repos = dict(filter(lambda x: x[0] not in self.repos,
+                repos.items()))
+        elif not (hasattr(self.args, 'all') and self.args.all):
+            # The default, filter so that only available repos get through
+            repos = dict(filter(lambda x: x[0] in self.repos, repos.items()))
+
+        max_repo_length = 0
+        for key in repos.keys():
+            new_len = len(key)
+            if new_len > max_repo_length:
+                max_repo_length = new_len
+
+        return '\n'.join([str(key.ljust(max_repo_length) + " - [" +
+            item['type'] + "] remote: " + item['remote']) for key, item in
+            repos.items()])
 
     def get_command(self):
-        """Get a repository from the defined in the Mr. Repo repository."""
-        pass
+        """Get a repository defined in the Mr. Repo repository, but not
+        available locally."""
+        name = self.args.name
+
+        if name in self.config['repos'].keys():
+            remote = self.config['repos'][name]['remote']
+            repo_type = self.config['repos'][name]['type']
+            if repo_type == "Git":
+                new_repo = git.Repo.clone_from(remote,
+                        path.join(self.args.dir, name))
+                self.repos.append(name)
+                ret = "Successfully cloned '%s' into '%s'." % (name,
+                    new_repo.working_dir)
+                self.write_config()
+            else:
+                ret = "ERROR: Repositories of type '%s' are not supported " % \
+                        repo_type
+        else:
+            ret = "ERROR: '%s' is not a Mr. Repo controlled repository." % name
+
+        return ret
 
     def unget_command(self):
         """Remove a repository defined in the Mr. Repo repository from the
         local system."""
-        pass
+        name = self.args.name
+
+        if name in self.config['repos'].keys() and name in self.repos:
+            repo_path = path.join(self.args.dir, name)
+            repo_type = self.config['repos'][name]['type']
+            ret = "Successfully removed the local copy of '%s'." % name
+            # Check that it is a Git repo
+            if repo_type == 'Git':
+                repo = git.Repo(repo_path)
+                # If we aren't forcing removal make sure it isn't dirty
+                if not (hasattr(self.args, 'force') and self.args.force) and \
+                        repo.is_dirty():
+                    ret = "ERROR: '%s' is dirty. Fix it or use the " \
+                            "`--force` option to force it's removal." % name
+                else:
+                    # Everything is ok. So we now do the removing
+                    shutil.rmtree(repo_path)
+                    self.repos.remove(name)
+            else:
+                ret = "ERROR: Repositories of type '%s' are not supported " % \
+                        repo_type
+        else:
+            ret = "ERROR: '%s' is not a currently checked out Mr. Repo " \
+                    "controlled repository." % name
+        return ret
 
     def update_command(self):
         """Interprets Mr. Repo controlled directory and automatically updates
