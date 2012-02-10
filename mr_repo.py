@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """Mr. Repo - A very simple reposoitory for managing other repositories."""
 # Author: Ryan McGowan
 version = "0.2.1"
@@ -389,16 +388,3 @@ class MrRepo(object):
         """Interprets Mr. Repo controlled directory and automatically updates
         tracking files based on its findings."""
         pass
-
-if __name__ == '__main__':
-    from sys import argv
-    import re
-    prog = "mr_repo"
-    if (len(argv) > 0):
-        prog = argv.pop(0)
-        # If prog does not look something like Mr. Repo then change it
-        if None == re.search('mr(\.|)([-_ ]{0,2})repo', prog,
-                flags=re.IGNORECASE):
-            prog = "mr_repo"
-    #Create an instance of MrRepo
-    repomr = MrRepo(prog=prog, args=argv, execute=True, one_use=True)
