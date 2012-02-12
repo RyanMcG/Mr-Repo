@@ -5,7 +5,7 @@ version = "0.2.2"
 from argparse import (ArgumentParser, SUPPRESS, RawDescriptionHelpFormatter,
         Action, ArgumentTypeError)
 from textwrap import dedent
-from os import path
+import os
 import git
 import shutil
 import yaml
@@ -16,12 +16,12 @@ class MrRepoDirAction(Action):
 
     @classmethod
     def check_dir(this, adir, config_file_name, is_init):
-        apath = path.abspath(path.normpath(adir))
-        if not path.isdir(apath):
+        apath = os.path.abspath(os.path.normpath(adir))
+        if not os.path.isdir(apath):
             raise ArgumentTypeError("ERROR: %s is not a directory." % apath)
 
         if not is_init:
-            if not path.isfile(path.join(apath, config_file_name)):
+            if not os.path.isfile(os.path.join(apath, config_file_name)):
                 raise ArgumentTypeError("ERROR: %s is not a Mr. Repo repo." %
                         apath)
         return apath
@@ -51,7 +51,7 @@ class MrRepo(object):
         self._config_file_name = config_file
         self._repo_file_name = repo_file
 
-        #Setup parser
+        # Setup parser
         self.parser = ArgumentParser(
                 prog=prog,
                 formatter_class=RawDescriptionHelpFormatter,
@@ -91,7 +91,7 @@ class MrRepo(object):
                 help='The user must use one of these commands (otherwise ' \
                         'they can use the help and version flags).')
 
-        #Parsing for `init` command
+        # Parsing for `init` command
         init_parser = subparsers.add_parser('init',
                 formatter_class=RawDescriptionHelpFormatter,
                 description=dedent(self.init_command.__doc__))
@@ -101,7 +101,7 @@ class MrRepo(object):
                         'create a blank repo')
         init_parser.set_defaults(func=self.init_command)
 
-        #Parsing for `list` command
+        # Parsing for `list` command
         list_parser = subparsers.add_parser('list',
                 formatter_class=RawDescriptionHelpFormatter,
                 description=dedent(self.list_command.__doc__))
@@ -146,6 +146,11 @@ class MrRepo(object):
                 'being removed from the local Mr. Repo repo')
         unget_parser.set_defaults(func=self.unget_command)
 
+        # Parser for `update` command
+        update_parser = subparsers.add_parser('update',
+                description=dedent(self.add_command.__doc__))
+        update_parser.set_defaults(func=self.update_command)
+
         for sp in subparsers.choices.values():
             sp._config_file_name = self._config_file_name
             sp.add_argument('--dir', '-d', dest="dir", default='.',
@@ -155,8 +160,8 @@ class MrRepo(object):
     def __path(self, spath):
         extra = " so it cannot be added to Mr. Repo."
         try:
-            apath = path.abspath(path.normpath(spath))
-            if not path.isdir(apath):
+            apath = os.path.abspath(os.path.normpath(spath))
+            if not os.path.isdir(apath):
                 raise ArgumentTypeError("%s is not a directory" % spath +
                         extra)
             if self._get_repo(apath) == None:
@@ -183,12 +188,12 @@ class MrRepo(object):
     # Public functions
 
     def setup_files(self):
-        self.config_path = path.join(self.args.dir, self._config_file_name)
-        self.repo_file_path = path.join(self.args.dir, self._repo_file_name)
-        if not path.isfile(self.config_path):
+        self.config_path = os.path.join(self.args.dir, self._config_file_name)
+        self.repo_file_path = os.path.join(self.args.dir, self._repo_file_name)
+        if not os.path.isfile(self.config_path):
             self.config_file = file(self.config_path, 'w')
         self.config_file = file(self.config_path, 'r+')
-        if not path.isfile(self.repo_file_path):
+        if not os.path.isfile(self.repo_file_path):
             self.repo_file = file(self.repo_file_path, 'w')
         self.repo_file = file(self.repo_file_path, 'r+')
 
@@ -261,25 +266,26 @@ class MrRepo(object):
         self.write_config()
         return "Successfully initialized Mr. Repo at '%s'." % self.args.dir
 
-    def add_command(self):
+    def add_command(self, path=None):
         """Add a definition of a local repository to the Mr. Repo
         repository."""
-        repo_name = path.basename(self.args.path)
+        path = path or self.args.path
+        repo_name = os.path.basename(path)
         if not self.__repo(repo_name):
-            rep = self._get_repo(self.args.path)
+            rep = self._get_repo(path)
             if rep != None:
-                self.repos.append(path.basename(self.args.path))
+                self.repos.append(os.path.basename(path))
                 if len(rep.remotes) > 0:
                     repo_dict = {repo_name: {'type': 'Git',
-                        'remote': rep.remote().url}}
+                        'remote': rep.remote().url}, 'path': path}
                 else:
-                    repo_dict = {repo_name: {'type': 'Git'}}
+                    repo_dict = {repo_name: {'type': 'Git', 'path': path}}
                 self.config.get('repos').update(repo_dict)
                 self.write_config()
                 result = "Successfully added '%s' to Mr. Repo." % repo_name
             else:
                 result = "ERROR: %s is not a not a supported repository." % \
-                        self.args.path
+                        path
         else:
             result = ("ERROR: %s already in %s (i.e. controlled by Mr. "
                     "Repo).") % (repo_name, self._config_file_name)
@@ -328,9 +334,9 @@ class MrRepo(object):
             if new_len > max_repo_length:
                 max_repo_length = new_len
 
-        return '\n'.join([str(key.ljust(max_repo_length) + " - [" +
-            item['type'] + "] remote: " + item['remote']) for key, item in
-            repos.items()])
+        return '\n'.join([str(key.ljust(max_repo_length) + " - [%s] %s" % \
+                (item['type'], ' '.join(["%s: %s" % (name, value) for name,
+                    value in item.items()]))) for key, item in repos.items()])
 
     def get_command(self):
         """Get a repository defined in the Mr. Repo repository, but not
@@ -340,9 +346,10 @@ class MrRepo(object):
         if name in self.config['repos'].keys():
             remote = self.config['repos'][name]['remote']
             repo_type = self.config['repos'][name]['type']
+            repo_path = self.config['repos'][name]['path']
             if repo_type == "Git":
-                new_repo = git.Repo.clone_from(remote,
-                        path.join(self.args.dir, name))
+                new_repo = git.Repo.clone_from(remote, repo_path or
+                        self.os.path.join(self.args.dir, name))
                 self.repos.append(name)
                 ret = "Successfully cloned '%s' into '%s'." % (name,
                     new_repo.working_dir)
@@ -361,7 +368,8 @@ class MrRepo(object):
         name = self.args.name
 
         if name in self.config['repos'].keys() and name in self.repos:
-            repo_path = path.join(self.args.dir, name)
+            repo_path = self.config['repos'][name]['path'] or \
+                    os.path.join(self.args.dir, name)
             repo_type = self.config['repos'][name]['type']
             ret = "Successfully removed the local copy of '%s'." % name
             # Check that it is a Git repo
@@ -387,4 +395,10 @@ class MrRepo(object):
     def update_command(self):
         """Interprets Mr. Repo controlled directory and automatically updates
         tracking files based on its findings."""
-        pass
+        (base_path, directories, filenames) = os.walk(self.args.dir).next()
+        repos = [os.path.join(base_path, repo) for repo in filter(lambda x: not
+            self.__repo(x) and isinstance(self._get_repo(x), git.Repo),
+            directories)]
+
+        # Add all of the repos
+        map(self.add_command, repos)
