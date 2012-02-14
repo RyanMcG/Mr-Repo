@@ -1,6 +1,5 @@
 """Mr. Repo - A very simple reposoitory for managing other repositories."""
 # Author: Ryan McGowan
-version = "0.2.2"
 
 from argparse import (ArgumentParser, SUPPRESS, RawDescriptionHelpFormatter,
         Action, ArgumentTypeError)
@@ -44,7 +43,12 @@ class MrRepo(object):
 
     def __init__(self, prog='mr_repo', args=None, execute=False, quiet=False,
             config_file=".mr_repo.yml", repo_file='.this_repo', one_use=False):
+        # Determine what the version is
+        version = "UNKNOWN"
+        with open('VERSION.txt') as file:
+            version = file.read().rstrip()
         self.version = version
+
         self.config = {'repos': {}}
         self.repos = []
         self._command_term = 'command'
