@@ -1,6 +1,6 @@
 #from distutils.core import setup
 from setuptools import setup
-from version import version
+from mr_repo.version import version
 import os
 
 with open(os.path.join(os.path.dirname(__file__), 'README.rst')) as file:
@@ -14,9 +14,8 @@ setup(name='Mr-Repo',
       long_description=long_description,
       url='http://pypi.python.org/pypi/Mr-Repo/' + version,
       install_requires=['PyYAML', 'GitPython'],
-      py_modules=['mr_repo'],
-      scripts=['mr_repo'],
-      data_files=[('', ['VERSION.txt'])],
+      packages=['mr_repo'],
+      scripts=['mr-repo'],
       classifiers=['Development Status :: 4 - Beta',
           'Programming Language :: Python',
           'Programming Language :: Python :: 2']
