@@ -45,7 +45,8 @@ class MrRepo(object):
             config_file=".mr_repo.yml", repo_file='.this_repo', one_use=False):
         # Determine what the version is
         version = "UNKNOWN"
-        with open('VERSION.txt') as file:
+        with open(os.path.join(os.path.dirname(__file__), 'VERSION.txt')) \
+                as file:
             version = file.read().rstrip()
         self.version = version
 
