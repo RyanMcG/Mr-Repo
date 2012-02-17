@@ -4,6 +4,7 @@
 from argparse import (ArgumentParser, SUPPRESS, RawDescriptionHelpFormatter,
         Action, ArgumentTypeError)
 from textwrap import dedent
+from version import version
 import os
 import git
 import shutil
@@ -43,13 +44,6 @@ class MrRepo(object):
 
     def __init__(self, prog='mr_repo', args=None, execute=False, quiet=False,
             config_file=".mr_repo.yml", repo_file='.this_repo', one_use=False):
-        # Determine what the version is
-        version = "UNKNOWN"
-        with open(os.path.join(os.path.dirname(__file__), 'VERSION.txt')) \
-                as file:
-            version = file.read().rstrip()
-        self.version = version
-
         self.config = {'repos': {}}
         self.repos = []
         self._command_term = 'command'
@@ -88,7 +82,7 @@ class MrRepo(object):
 
     def __setup_parser(self):
         self.parser.add_argument('--version', action='version',
-                version="Mr. Repo " + self.version)
+                version="Mr. Repo " + version)
         subparsers = self.parser.add_subparsers(
                 title='Commands',
                 description='Valid Mr. Repo commands:',
