@@ -7,7 +7,7 @@ the tests use nose (and rednose if you want nice color):
 """
 # Author: Ryan McGowan
 from pea import step, TestCase, Given, When, Then, And, world
-from mr_repo import MrRepo
+from mr_repo.repo_management import MrRepo
 import os
 import git
 import tempfile
