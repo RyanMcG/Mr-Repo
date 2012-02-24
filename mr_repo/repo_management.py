@@ -1,8 +1,8 @@
 """Mr. Repo - A very simple reposoitory for managing other repositories."""
 # Author: Ryan McGowan
 
-from argparse import (ArgumentParser, SUPPRESS, RawDescriptionHelpFormatter,
-        Action, ArgumentTypeError)
+from argparse import (ArgumentParser, RawDescriptionHelpFormatter, Action,
+        ArgumentTypeError)
 from textwrap import dedent
 from version import version
 import os
@@ -107,11 +107,11 @@ class MrRepo(object):
         mutex_list_args = list_parser.add_mutually_exclusive_group()
         # --unavailable Just show currently unavailable repos
         mutex_list_args.add_argument('--unavailable', '-u',
-                dest='unavailable', action='store_true', default=SUPPRESS,
+                dest='unavailable', action='store_true', default=False,
                 help='list only currently unavailable repos.')
         # --all to show all repos (currently available or not)
         mutex_list_args.add_argument('--all', '-a', dest='all',
-                action='store_true', default=SUPPRESS, help='list all repos' \
+                action='store_true', default=False, help='list all repos' \
                         '(i.e. currently available or not)')
 
         list_parser.set_defaults(func=self.list_command)
@@ -147,7 +147,12 @@ class MrRepo(object):
 
         # Parser for `update` command
         update_parser = subparsers.add_parser('update',
-                description=dedent(self.add_command.__doc__))
+                description=dedent(self.update_command.__doc__))
+        update_parser.add_argument('--local', '-l',
+                dest='local', action='store_true', default=False,
+                help='Forces an update of configuration for local, ' \
+                        'controlled repositories.')
+        # --all to show all repos (currently available or not)
         update_parser.set_defaults(func=self.update_command)
 
         for sp in subparsers.choices.values():
@@ -159,7 +164,7 @@ class MrRepo(object):
     def __path(self, spath):
         extra = " so it cannot be added to Mr. Repo."
         try:
-            apath = os.path.abspath(os.path.normpath(spath))
+            apath = os.path.normpath(spath)
             if not os.path.isdir(apath):
                 raise ArgumentTypeError("%s is not a directory" % spath +
                         extra)
@@ -170,10 +175,6 @@ class MrRepo(object):
             print("ERROR: " + inst.message)
 
         return apath
-
-    def __repo(self, repo_str):
-        """Function returns true if repo_str is a Mr. Repo controlled repo."""
-        return repo_str in self.config.get('repos').keys()
 
     # Pseudo private functions
 
@@ -196,14 +197,38 @@ class MrRepo(object):
             self.repo_file = file(self.repo_file_path, 'w')
         self.repo_file = file(self.repo_file_path, 'r+')
 
-    def read_config(self):
+    def read_config(self, check=True):
         """Read `.mr_repo.yml` and `.this_repo` files to determine state the of
         the repository."""
         self.config_file.seek(0)
         self.config = yaml.load(self.config_file)
         self.repo_file.seek(0)
-        self.repos = filter(self.__repo, [repo.rstrip() for repo in
+        self.repos = filter(self.is_conrtolled_repo, [repo.rstrip() for repo in
             self.repo_file.readlines()])
+        if check:
+            self.check_config()
+
+    def check_config(self, reread=False, compare_to_directory=True):
+        """Checks to see whether config and repos are of the proper format.
+        Optionally, this function can check values in config and repos against
+        the Mr. Repo controlled directory."""
+        if reread:
+            self.read_config()
+
+        #Check that self.repos is a list of strings
+        repos_ok = isinstance(self.repos, list) and len(filter(lambda x: not \
+                isinstance(x, str), self.repos)) == 0
+
+        #Check to make sure that each entry in config has valid keys/values
+        config_ok = isinstance(self.config, dict)
+        if config_ok:
+            try:
+                config_ok = filter(lambda x: isinstance(x[0], str) and
+                        isinstance(x[1], dict), self.config)
+            except:
+                config_ok = False
+
+        return {'repos': repos_ok, 'config': config_ok}
 
     def write_config(self):
         """Write config to config file."""
@@ -228,18 +253,20 @@ class MrRepo(object):
                         self._config_file_name, self.is_init)
         except ArgumentTypeError as inst:
             print(inst.message)
-            self.print_help()
+            print(str(self.args))
+            self.parser.print_help()
             exit(2)
 
-    def print_help(self):
-        self.parser.print_help()
+    def is_conrtolled_repo(self, repo_str):
+        """Function returns true if repo_str is a Mr. Repo controlled repo."""
+        return repo_str in self.config.get('repos').keys()
 
     def execute(self):
         if callable(self.args.func):
             result = self.args.func()
         else:
             print("INTERNAL ERROR: Couldn't parse arguments!")
-            self.print_help()
+            self.parser.print_help()
         return result
 
     def close(self):
@@ -270,7 +297,7 @@ class MrRepo(object):
         repository."""
         path = path or self.args.path
         repo_name = os.path.basename(path)
-        if not self.__repo(repo_name):
+        if not self.is_conrtolled_repo(repo_name):
             rep = self._get_repo(path)
             if rep != None:
                 self.repos.append(os.path.basename(path))
@@ -334,8 +361,9 @@ class MrRepo(object):
                 max_repo_length = new_len
 
         return '\n'.join([str(key.ljust(max_repo_length) + " - [%s] %s" % \
-                (item['type'], ' '.join(["%s: %s" % (name, value) for name,
-                    value in item.items()]))) for key, item in repos.items()])
+                (item['type'], ', '.join(["%s: %s" % (name, value) for name,
+                    value in filter(lambda x: x[0] != 'type', item.items())])))
+                for key, item in repos.items()])
 
     def get_command(self):
         """Get a repository defined in the Mr. Repo repository, but not
@@ -395,9 +423,14 @@ class MrRepo(object):
         """Interprets Mr. Repo controlled directory and automatically updates
         tracking files based on its findings."""
         (base_path, directories, filenames) = os.walk(self.args.dir).next()
-        repos = [os.path.join(base_path, repo) for repo in filter(lambda x: not
-            self.__repo(x) and isinstance(self._get_repo(x), git.Repo),
-            directories)]
+        repos = [os.path.join(base_path, repo) for repo in filter(lambda x: \
+                not self.is_conrtolled_repo(x) and
+                isinstance(self._get_repo(x), git.Repo), directories)]
+
+        if self.args.local:
+            # Unavailable means it is in the config, but not in self.repos.
+            repos = dict(filter(lambda x: x[0] in self.repos,
+                repos.items()))
 
         # Add all of the repos
         map(self.add_command, repos)
