@@ -76,3 +76,10 @@ The ``unget`` command removes the repo if all changes have been fully committed
 and also updates the ``.this_repo`` file. In the case where a there are uncomitted
 changes an error is thrown and the command fails. If the user wants to remove it
 anyways then the user can add the ``-f`` flag to force the removal.
+
+TO DO
+~~~~~
+
+*   Add depth parameter to update to allow search none repositories recursively.
+*   Create a MrRepoRepo wrapper class for use in MrRepo instead of calling
+    git.Repo directly
