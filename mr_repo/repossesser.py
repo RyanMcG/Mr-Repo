@@ -1,5 +1,3 @@
-#!/usr/bin/env python2
-
 """Mr. Repo - A simple multiple repository manager."""
 # Author: Ryan McGowan
 
@@ -328,7 +326,7 @@ class Repossesser(object):
             self.config['repos'].pop(name)
             if name in self.repos:
                 self.repos.remove(name)
-            ret = "Successfully remove '%s' from Mr. Repo control."
+            ret = "Successfully removed '%s' from Mr. Repo control." % name
             self.write_config()
         else:
             ret = "ERROR: '%s' is not a Mr. Repo controlled repository." % name
