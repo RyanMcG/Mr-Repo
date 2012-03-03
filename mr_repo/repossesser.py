@@ -1,17 +1,19 @@
-"""Mr. Repo - A very simple reposoitory for managing other repositories."""
+#!/usr/bin/env python2
+
+"""Mr. Repo - A simple multiple repository manager."""
 # Author: Ryan McGowan
 
 from argparse import (ArgumentParser, RawDescriptionHelpFormatter, Action,
         ArgumentTypeError)
 from textwrap import dedent
-from version import version
+from mr_repo import version
 import os
-import git
 import shutil
 import yaml
+import git
 
 
-class MrRepoDirAction(Action):
+class _MrRepoDirAction(Action):
     """Action to be called on dir arg for mr repo."""
 
     @classmethod
@@ -27,15 +29,15 @@ class MrRepoDirAction(Action):
         return apath
 
     def __call__(self, parser, namespace, values, option_string=None):
-        apath = MrRepoDirAction.check_dir(values, parser._config_file_name,
+        apath = _MrRepoDirAction.check_dir(values, parser._config_file_name,
                 namespace.command == 'init')
 
         setattr(namespace, self.dest, apath)
 
 
-class MrRepo(object):
+class Repossesser(object):
     """
-    The MrRepo class used to do all of the dirty work behind MrRepo.
+    The Repossesser class used to do all of the dirty work behind Mr. Repo.
 
     This class contains the basic functionality of the Mr. Repo project
     including the argument parser, and `.mr_repo.yml` and `.this_repo`
@@ -159,7 +161,7 @@ class MrRepo(object):
             sp._config_file_name = self._config_file_name
             sp.add_argument('--dir', '-d', dest="dir", default='.',
                     help='The Mr. Repo directory being worked on.',
-                    action=MrRepoDirAction)
+                    action=_MrRepoDirAction)
 
     def __path(self, spath):
         extra = " so it cannot be added to Mr. Repo."
@@ -249,12 +251,11 @@ class MrRepo(object):
             self.args = self.parser.parse_args(args)
             self.is_init = self.args.command == 'init'
             if self.args.dir == '.':
-                self.args.dir = MrRepoDirAction.check_dir(self.args.dir,
+                self.args.dir = _MrRepoDirAction.check_dir(self.args.dir,
                         self._config_file_name, self.is_init)
         except ArgumentTypeError as inst:
             print(inst.message)
             print(str(self.args))
-            self.parser.print_help()
             exit(2)
 
     def is_conrtolled_repo(self, repo_str):

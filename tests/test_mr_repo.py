@@ -7,7 +7,7 @@ the tests use nose (and rednose if you want nice color):
 """
 # Author: Ryan McGowan
 from pea import step, TestCase, Given, When, Then, And, world
-from mr_repo.repo_management import MrRepo
+from mr_repo.repossesser import Repossesser
 import os
 import git
 import tempfile
@@ -18,8 +18,8 @@ import shutil
 
 
 def clone_state(mr_repo):
-    """Clones the state of a MrRepo instance."""
-    if isinstance(mr_repo, MrRepo):
+    """Clones the state of a Repossesser instance."""
+    if isinstance(mr_repo, Repossesser):
         return {'config': copy.deepcopy(world.mr_repo.config),
                 'repos': world.mr_repo.repos[:]}
     else:
