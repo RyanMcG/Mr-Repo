@@ -1,4 +1,3 @@
-"""Mr. Repo - A simple multiple repository manager."""
 # Author: Ryan McGowan
 
 from argparse import (ArgumentParser, RawDescriptionHelpFormatter, Action,

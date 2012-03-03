@@ -1,18 +1,18 @@
 #from distutils.core import setup
 from setuptools import setup
-from mr_repo.version import version
+import mr_repo
 import os
 
 with open(os.path.join(os.path.dirname(__file__), 'README.rst')) as file:
         long_description = file.read()
 
 setup(name='Mr-Repo',
-      version=version,
+      version=mr_repo.version,
       author='Ryan McGowan',
       author_email='ryan@ryanmcg.com',
-      description='A very simple repo manager of repos.',
+      description=mr_repo.__doc__,
       long_description=long_description,
-      url='http://pypi.python.org/pypi/Mr-Repo/' + version,
+      url='http://pypi.python.org/pypi/Mr-Repo/' + mr_repo.version,
       install_requires=['PyYAML', 'GitPython'],
       packages=['mr_repo'],
       scripts=['scripts/mr_repo'],

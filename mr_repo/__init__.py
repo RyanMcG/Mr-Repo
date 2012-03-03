@@ -1,3 +1,4 @@
+"""Mr. Repo - A simple repo management system"""
 from mr_repo.version import version
 
 if __name__ == '__main__':

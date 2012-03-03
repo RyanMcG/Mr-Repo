@@ -38,21 +38,21 @@ Usage
 Run the ``init`` command to get to set up the two files by automatically
 interpreting subdirectories. ::
 
-    python mr_repo.py init [--clean]
+    mr_repo init [--clean]
 
 The ``--clean`` option causes the ``init`` command create blank tracking files and to not automatically interpret subdirectories.
 
 Once you have the files setup you can add and remove repos by their directory
 names with the add and remove commands. ::
 
-    python mr_repo.py add <repo/direcotry name>
+    mr_repo add <repo/direcotry name>
     # Or to remove a repo
-    python mr_repo.py rm <repo/direcotry name>
+    mr_repo rm <repo/direcotry name>
 
 You can also automatically reinterpret the current directory with the ``update``
 command. ::
 
-    python mr_repo.py update
+    mr_repo update
 
 That's all the boring stuff. The part of *Mr. Repo* that's actually useful is
 its ability to pull repos you've added from other places, but aren't available
@@ -64,13 +64,13 @@ also displays information about unavailable repos (i.e. repos that are not
 currently set up in the CWD). As you might expect the ``-n`` flag can be used to
 display repos that are not currently available. ::
 
-    python mr_repo.py list [-a | --all] [-n | --not-available]
+    mr_repo list [-a | --all] [-n | --not-available]
 
 Once you know what repos are or are not currently available you can
 ``get``/``unget`` them. ::
 
-    python mr_repo.py get <not currently available repo name>
-    python mr_repo.py unget [-f | --force] <currently available repo name>
+    mr_repo get <not currently available repo name>
+    mr_repo unget [-f | --force] <currently available repo name>
 
 The ``unget`` command removes the repo if all changes have been fully committed
 and also updates the ``.this_repo`` file. In the case where a there are uncomitted
@@ -80,6 +80,7 @@ anyways then the user can add the ``-f`` flag to force the removal.
 TO DO
 ~~~~~
 
+*   Update this file.
 *   Add depth parameter to update to allow search none repositories recursively.
 *   Create a MrRepoRepo wrapper class for use in MrRepo instead of calling
     git.Repo directly
