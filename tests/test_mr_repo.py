@@ -29,20 +29,19 @@ def clone_state(mr_repo):
 
 
 @step
-def I_have_a_Mr_Repo_repository(init_dir=None, execute=True, clean=False):
+def I_have_a_Mr_Repo_repository(execute=True, clean=False):
     """Creates a Mr. Repo repository and stores the inital state."""
-    args = ['init']
+    args = ['init', '-d', world.tdir]
     if clean:
         args.append('--clean')
-    if init_dir != None and isinstance(init_dir, str):
-        args.extend(['-d', init_dir])
-    world.mr_repo = MrRepo(args=args, execute=execute, quiet=True)
+    world.mr_repo = Repossesser(args=args, execute=execute, quiet=True)
     world.states = [clone_state(world.mr_repo)]
 
 
 @step
 def I_have_the_following_input(given_input):
-    """Keep the given input for future use."""
+    """Keep the given input for future use. This function can be called
+    multiple times to emmulate multiple mr_repo commands."""
     if isinstance(given_input, str):
         if hasattr(world, 'given_input') and isinstance(world.given_input,
                 list):
@@ -54,11 +53,7 @@ def I_have_the_following_input(given_input):
 
 
 @step
-def I_have_a_git_repository_called(repo_name, bare=False, prefix=None):
-    prefix = prefix or "tmpmrrepotesting"
-    world.tdir = tempfile.mkdtemp(prefix=prefix)
-    #world.tdir = os.path.abspath(prefix)
-    #os.mkdir(world.tdir)
+def I_have_a_git_repository_called(repo_name, bare=False):
     repo_dir = os.path.join(world.tdir, repo_name)
     world.repos.append(git.Repo.init(repo_dir, bare=bare))
 
@@ -68,7 +63,10 @@ def I_have_a_git_repository_called(repo_name, bare=False, prefix=None):
 @step
 def I_parse_a_line_of_the_input():
     """Parse the given arguments."""
-    world.mr_repo.parse_args(world.given_input.pop(0).split())
+    args = world.given_input.pop(0).split()
+    if '-d' not in args:
+        args.extend(['-d', world.tdir])
+    world.mr_repo.parse_args(args)
 
 
 @step
@@ -132,18 +130,20 @@ def I_have_updated_config_files(config_check=world.assertNotEqual,
 # Test cases ------------------------------------------------------------------
 
 
-class MrRepoStories(TestCase):
+class RepossesserStories(TestCase):
     """Some test cases for Mr. Repo."""
 
     def setUp(self):
-        """Setup MrRepoStories tests."""
-        super(MrRepoStories, self).setUp()
-        world.mr_repo = MrRepo()
+        """Setup RepossesserStories tests."""
+        super(RepossesserStories, self).setUp()
+        prefix = "tmpmrrepotesting"
+        world.tdir = tempfile.mkdtemp(prefix=prefix)
+        world.mr_repo = Repossesser()
         world.states = [clone_state(world.mr_repo)]
         world.repos = []
 
     def tearDown(self):
-        super(MrRepoStories, self).tearDown()
+        super(RepossesserStories, self).tearDown()
         # Make sure the mr_repo files are closed
         world.mr_repo.config_file.close()
         world.mr_repo.repo_file.close()
@@ -186,11 +186,12 @@ class MrRepoStories(TestCase):
         """Adding a valid directory/repo works."""
         repo_name = "Shoes"
         Given.I_have_a_git_repository_called(repo_name)
-        And.I_have_a_Mr_Repo_repository(init_dir=world.tdir)
+        And.I_have_a_Mr_Repo_repository()
         When.I_add_the_repository(world.repos[0].working_dir)
         Then.I_have_updated_config_files(
-                config_check=MrRepoStories.__config_has_new_repo(repo_name),
-                repo_check=MrRepoStories.__repo_has_new_repo(repo_name))
+                config_check=RepossesserStories.__config_has_new_repo(
+                    repo_name),
+                repo_check=RepossesserStories.__repo_has_new_repo(repo_name))
 
     def test_running_init_clean(self):
         """Running init with the '--clean' flag results in a clean repo."""

@@ -150,7 +150,7 @@ class Repossesser(object):
         # Parser for `update` command
         update_parser = subparsers.add_parser('update',
                 description=dedent(self.update_command.__doc__))
-        update_parser.add_argument('--local', '-l',
+        update_parser.add_argument('--current-only', '-c',
                 dest='local', action='store_true', default=False,
                 help='Forces an update of configuration for local, ' \
                         'controlled repositories.')
@@ -428,7 +428,7 @@ class Repossesser(object):
                 not self.is_conrtolled_repo(x) and
                 isinstance(self._get_repo(x), git.Repo), directories)]
 
-        if self.args.local:
+        if hasattr(self.args, "current") and self.args.current:
             # Unavailable means it is in the config, but not in self.repos.
             repos = dict(filter(lambda x: x[0] in self.repos,
                 repos.items()))
