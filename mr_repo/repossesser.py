@@ -42,12 +42,14 @@ class Repossesser(object):
     """
 
     def __init__(self, prog='mr_repo', args=None, execute=False, quiet=False,
-            config_file=".mr_repo.yml", repo_file='.this_repo', one_use=False):
+            config_file=".mr_repo.yml", repo_file='.this_repo', one_use=False,
+            verbose=False):
         self.config = {'repos': {}}
         self.repos = []
         self._command_term = 'command'
         self._config_file_name = config_file
         self._repo_file_name = repo_file
+        self.verbose = verbose
 
         # Setup parser
         self.parser = ArgumentParser(
@@ -159,6 +161,9 @@ class Repossesser(object):
             sp.add_argument('--dir', '-d', dest="dir", default='.',
                     help='The Mr. Repo directory being worked on.',
                     action=_MrRepoDirAction)
+            sp.add_argument('--verbose', '-v', dest="verbose", default=False,
+                    help='Run this command verbosely to show debug output.',
+                    action='store_true')
 
     def __path(self, spath):
         extra = " so it cannot be added to Mr. Repo."
@@ -177,7 +182,12 @@ class Repossesser(object):
 
     # Pseudo private functions
 
-    def _get_repo(self, apath):
+    def _debug(self, debugging_info):
+        if self.verbose:
+            print(str(debugging_info))
+
+    @classmethod
+    def _get_repo(cls, apath):
         try:
             repo = git.Repo(apath)
         except:
@@ -247,6 +257,8 @@ class Repossesser(object):
         try:
             self.args = self.parser.parse_args(args)
             self.is_init = self.args.command == 'init'
+            if hasattr(self.args, 'verbose'):
+                self.verbose = self.verbose or self.args.verbose
             if self.args.dir == '.':
                 self.args.dir = _MrRepoDirAction.check_dir(self.args.dir,
                         self._config_file_name, self.is_init)
@@ -304,6 +316,7 @@ class Repossesser(object):
                         'remote': rep.remote().url}, 'path': path}
                 else:
                     repo_dict = {repo_name: {'type': 'Git', 'path': path}}
+                self._debug(repo_dict)
                 self.config.get('repos').update(repo_dict)
                 self.write_config()
                 result = "Successfully added '%s' to Mr. Repo." % repo_name
