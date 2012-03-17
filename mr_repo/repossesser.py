@@ -194,6 +194,23 @@ class Repossesser(object):
             return None
         return repo
 
+    @classmethod
+    def find_repos(cls, start_path, max_depth=4):
+        found_repos = []
+        if max_depth > 0:
+            (base_path, directories, filenames) = os.walk(start_path).next()
+            for directory in directories:
+                directory = os.path.join(start_path, directory)
+                directory_repo = cls._get_repo(directory)
+                if isinstance(directory_repo, git.Repo):
+                    found_repos.append(os.path.normpath(directory))
+                else:
+                    print("find_repos: Recursing into %s with depth %d." %
+                            (directory, max_depth - 1))
+                    found_repos.extend(cls.find_repos(directory,
+                        max_depth - 1))
+        return found_repos
+
     # Public functions
 
     def check_repo_name(self, name):
@@ -444,10 +461,10 @@ class Repossesser(object):
     def update_command(self):
         """Interprets Mr. Repo controlled directory and automatically updates
         tracking files based on its findings."""
-        (base_path, directories, filenames) = os.walk(self.args.dir).next()
-        repos = [os.path.join(base_path, repo) for repo in filter(lambda x: \
-                not self.is_conrtolled_repo(x) and
-                isinstance(self._get_repo(x), git.Repo), directories)]
+        start_len = len(self.repos)
+        repos = filter(lambda x: not self.is_conrtolled_repo(x),
+                self.find_repos(self.args.dir if not hasattr(self.args, 'path')
+                    else self.args.path))
 
         if hasattr(self.args, "current") and self.args.current:
             # Unavailable means it is in the config, but not in self.repos.
