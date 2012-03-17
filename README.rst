@@ -101,6 +101,6 @@ TO DO
 ~~~~~
 
 *   Update this file.
-*   Add depth parameter to update to allow search none repositories recursively.
+*   Add depth parameter to ``update`` to enable configuration of max depth.
 *   Create a MrRepoRepo wrapper class for use in MrRepo instead of calling
     git.Repo directly
