@@ -15,7 +15,7 @@ class _MrRepoDirAction(Action):
 
     @classmethod
     def check_dir(this, adir, config_file_name, is_init):
-        apath = os.path.abspath(os.path.normpath(adir))
+        apath = os.path.normpath(adir)
         if not os.path.isdir(apath):
             raise ArgumentTypeError("ERROR: %s is not a directory." % apath)
 
@@ -196,6 +196,13 @@ class Repossesser(object):
 
     # Public functions
 
+    def check_repo_name(self, name):
+        repo_name = os.path.basename(os.path.normpath(name))
+        if self.is_conrtolled_repo(repo_name):
+            return repo_name
+        else:
+            return False
+
     def setup_files(self):
         self.config_path = os.path.join(self.args.dir, self._config_file_name)
         self.repo_file_path = os.path.join(self.args.dir, self._repo_file_name)
@@ -313,7 +320,7 @@ class Repossesser(object):
                 self.repos.append(os.path.basename(path))
                 if len(rep.remotes) > 0:
                     repo_dict = {repo_name: {'type': 'Git',
-                        'remote': rep.remote().url}, 'path': path}
+                        'remote': rep.remote().url, 'path': path}}
                 else:
                     repo_dict = {repo_name: {'type': 'Git', 'path': path}}
                 self._debug(repo_dict)
@@ -332,9 +339,9 @@ class Repossesser(object):
         """Remove a definition of a local repository from the Mr. Repo
         repository. Nothing is removed from the filesystem (use `unget` for
         that."""
-        name = self.args.name
+        name = self.check_repo_name(self.args.name)
 
-        if name in self.config['repos'].keys():
+        if name:
             self.config['repos'].pop(name)
             if name in self.repos:
                 self.repos.remove(name)
@@ -379,22 +386,26 @@ class Repossesser(object):
     def get_command(self):
         """Get a repository defined in the Mr. Repo repository, but not
         available locally."""
-        name = self.args.name
+        name = self.check_repo_name(self.args.name)
 
-        if name in self.config['repos'].keys():
-            remote = self.config['repos'][name]['remote']
-            repo_type = self.config['repos'][name]['type']
-            repo_path = self.config['repos'][name]['path']
-            if repo_type == "Git":
-                new_repo = git.Repo.clone_from(remote, repo_path or
-                        self.os.path.join(self.args.dir, name))
-                self.repos.append(name)
-                ret = "Successfully cloned '%s' into '%s'." % (name,
-                    new_repo.working_dir)
-                self.write_config()
+        if name:
+            if 'remote' in self.config['repos'][name]:
+                remote = self.config['repos'][name]['remote']
+                repo_type = self.config['repos'][name]['type']
+                repo_path = self.config['repos'][name]['path']
+                if repo_type == "Git":
+                    new_repo = git.Repo.clone_from(remote, repo_path or
+                            self.os.path.join(self.args.dir, name))
+                    self.repos.append(name)
+                    ret = "Successfully cloned '%s' into '%s'." % (name,
+                        new_repo.working_dir)
+                    self.write_config()
+                else:
+                    ret = "ERROR: Repositories of type '%s' are not " % \
+                            repo_type + "supported"
             else:
-                ret = "ERROR: Repositories of type '%s' are not supported " % \
-                        repo_type
+                ret = "ERROR: %s does not have an associated " % name + \
+                        "remote to repossess it from."
         else:
             ret = "ERROR: '%s' is not a Mr. Repo controlled repository." % name
 
@@ -403,9 +414,9 @@ class Repossesser(object):
     def unget_command(self):
         """Remove a repository defined in the Mr. Repo repository from the
         local system."""
-        name = self.args.name
+        name = self.check_repo_name(self.args.name)
 
-        if name in self.config['repos'].keys() and name in self.repos:
+        if name and name in self.repos:
             repo_path = self.config['repos'][name]['path'] or \
                     os.path.join(self.args.dir, name)
             repo_type = self.config['repos'][name]['type']
@@ -445,3 +456,13 @@ class Repossesser(object):
 
         # Add all of the repos
         map(self.add_command, repos)
+        difference = len(self.repos) - start_len
+        if difference > 0:
+            success_str = "Successfully added %d new repositories." % \
+                    difference
+        elif difference < 0:
+            success_str = "Successfully removed %d repositories." % \
+                    difference
+        else:
+            success_str = "No updates made to controlled repos."
+        return success_str
