@@ -1,10 +1,9 @@
 ========
 Mr. Repo
 ========
-
------------------------------------------
+-------------------------------
 A simple repo management system
------------------------------------------
+-------------------------------
 
 :Author: Ryan McGowan
 :Email: ryan@ryanmcg.com
@@ -26,11 +25,32 @@ of its state.
 ~~~~~~~~~~~
 
 I have have a repo folder on several of my computers. This folder contains
-mostly Git repositories that I want to be avaialble on multiple computers. I use
+mostly Git repositories that I want to be available on multiple computers. I use
 Dropbox to sync lots of files between my computers, but not the repo folder for
 several reasons. However, I still want to manage what I have in my repo folders
 across my computers. So, I'll be syncing the ``.mr_repo.yml`` file with Dropbox
 and letting *Mr. Repo* do the rest of the work.
+
+Running Mr. Repo / Installation
+-------------------------------
+
+Mr. Repo is available via pip. ::
+
+    pip install Mr-Repo
+
+To install Mr. Repo from source: ::
+
+    git clone git://github.com/RyanMcG/Mr-Repo.git
+    cd Mr-Repo
+    python setup.py install
+
+If you want to run Mr. Repo from source you need to manually get the
+dependencies first. ::
+
+    # Assuming you are already in the Mr-Repo directory
+    pip install -r requirements.txt
+    pip install -r dev-requirements.txt # Optional
+    ./mr
 
 Usage
 -----
@@ -73,7 +93,7 @@ Once you know what repos are or are not currently available you can
     mr_repo unget [-f | --force] <currently available repo name>
 
 The ``unget`` command removes the repo if all changes have been fully committed
-and also updates the ``.this_repo`` file. In the case where a there are uncomitted
+and also updates the ``.this_repo`` file. In the case where a there are uncommitted
 changes an error is thrown and the command fails. If the user wants to remove it
 anyways then the user can add the ``-f`` flag to force the removal.
 
