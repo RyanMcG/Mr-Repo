@@ -205,8 +205,6 @@ class Repossesser(object):
                 if isinstance(directory_repo, git.Repo):
                     found_repos.append(os.path.normpath(directory))
                 else:
-                    print("find_repos: Recursing into %s with depth %d." %
-                            (directory, max_depth - 1))
                     found_repos.extend(cls.find_repos(directory,
                         max_depth - 1))
         return found_repos
