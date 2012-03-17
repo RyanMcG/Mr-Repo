@@ -1,0 +1,5 @@
+#!/usr/bin/env python2
+from mr_repo.main import main
+
+if __name__ == '__main__':
+    main()

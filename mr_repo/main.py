@@ -1,9 +1,10 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
+from mr_repo.repossesser import Repossesser
+from sys import argv
+import re
 
-if __name__ == '__main__':
-    from mr_repo.repossesser import Repossesser
-    from sys import argv
-    import re
+
+def main():
     prog = "mr_repo"
     if (len(argv) > 0):
         prog = argv.pop(0)
@@ -12,4 +13,8 @@ if __name__ == '__main__':
                 flags=re.IGNORECASE):
             prog = "mr_repo"
     #Create an instance of MrRepo
-    repossesser = Repossesser(prog=prog, args=argv, execute=True, one_use=True)
+    Repossesser(prog=prog, args=argv, execute=True, one_use=True)
+
+
+if __name__ == '__main__':
+    main()

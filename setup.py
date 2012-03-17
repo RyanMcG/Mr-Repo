@@ -15,7 +15,11 @@ setup(name='Mr-Repo',
       url='http://pypi.python.org/pypi/Mr-Repo/' + mr_repo.version,
       install_requires=['PyYAML', 'GitPython'],
       packages=['mr_repo'],
-      scripts=['scripts/mr_repo'],
+      entry_points={
+          'console_scripts': [
+              'mr_repo = mr_repo.main:main'
+          ]
+      },
       classifiers=['Development Status :: 4 - Beta',
           'Programming Language :: Python',
           'Programming Language :: Python :: 2']
