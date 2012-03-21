@@ -197,7 +197,7 @@ class Repossesser(object):
     @classmethod
     def find_repos(cls, start_path, max_depth=4):
         found_repos = []
-        if max_depth > 0:
+        if max_depth >= 0:
             (base_path, directories, filenames) = os.walk(start_path).next()
             for directory in directories:
                 directory = os.path.join(start_path, directory)
