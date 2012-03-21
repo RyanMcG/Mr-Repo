@@ -57,6 +57,17 @@ def I_have_a_git_repository_called(repo_name, bare=False):
     repo_dir = os.path.join(world.tdir, repo_name)
     world.repos.append(git.Repo.init(repo_dir, bare=bare))
 
+
+@step
+def I_have_a_nested_structure(levels, prefix='level_'):
+    current_dir = world.tdir
+    for level in range(levels):
+        current_dir = os.path.join(current_dir, prefix + str(level + 1))
+        if not os.path.isdir(current_dir):
+            os.mkdir(current_dir)
+    world.max_level = levels
+    return os.path.normpath(current_dir)
+
 # When functions --------------------------------------------------------------
 
 
@@ -84,6 +95,12 @@ def I_execute_all_of_the_input():
         I_parse_a_line_of_the_input()
         I_execute_the_command()
         I_setup_and_read_files()
+
+
+@step
+def I_execute_the_following_input(given_input):
+    I_have_the_following_input(given_input)
+    I_execute_all_of_the_input()
 
 
 @step
@@ -145,13 +162,9 @@ class RepossesserStories(TestCase):
     def tearDown(self):
         super(RepossesserStories, self).tearDown()
         # Make sure the mr_repo files are closed
-        world.mr_repo.config_file.close()
-        world.mr_repo.repo_file.close()
-
-        # Make sure the test directory is gone
-        if hasattr(world, 'tdir'):
-            if os.path.exists(world.tdir):
-                shutil.rmtree(world.tdir)
+        if hasattr(world, 'mr_repo'):
+            world.mr_repo.close()
+            world.mr_repo = None
 
         # Make sure all the testing repos are gone
         for repo in world.repos:
@@ -160,7 +173,10 @@ class RepossesserStories(TestCase):
                 if os.path.exists(repo.working_dir):
                     shutil.rmtree(repo.working_dir)
 
-        world.mr_repo = None
+        # Make sure the test directory is gone
+        if hasattr(world, 'tdir'):
+            if os.path.exists(world.tdir):
+                shutil.rmtree(world.tdir)
 
     @classmethod
     def __config_has_new_repo(cls, new_repo_name):
@@ -186,7 +202,7 @@ class RepossesserStories(TestCase):
         """Adding a valid directory/repo works."""
         repo_name = "Shoes"
         Given.I_have_a_git_repository_called(repo_name)
-        And.I_have_a_Mr_Repo_repository()
+        And.I_have_a_Mr_Repo_repository(clean=True)
         When.I_add_the_repository(world.repos[0].working_dir)
         Then.I_have_updated_config_files(
                 config_check=RepossesserStories.__config_has_new_repo(
@@ -208,5 +224,21 @@ class RepossesserStories(TestCase):
         And.I_setup_and_read_files()
         And.I_execute_the_command()
         Then.I_have_Mr_Repo_config_files()
+
+    def test_update_searches_down_directories(self):
+        repo_name = "Socks"
+        current_dir = Given.I_have_a_nested_structure(levels=4)
+        repo_path = os.path.join(current_dir, repo_name)
+
+        And.I_have_a_git_repository_called(repo_path)
+        When.I_have_a_Mr_Repo_repository(clean=True)
+        And.I_execute_the_following_input("update")
+        Then.I_have_updated_config_files(
+                config_check=RepossesserStories.__config_has_new_repo(
+                    repo_name),
+                repo_check=RepossesserStories.__repo_has_new_repo(repo_name))
+
+    def test_update_stops_searching_at_max_level(self):
+        pass
 
     # TODO: Add more stories!
