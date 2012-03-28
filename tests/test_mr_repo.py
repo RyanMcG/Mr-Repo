@@ -6,9 +6,14 @@ the tests use nose (and rednose if you want nice color):
     nosetest --rednose -v
 """
 # Author: Ryan McGowan
+
+# Modify import path to import current code.
+import sys
+import os
+sys.path.insert(0, os.path.abspath('..'))
+
 from pea import step, TestCase, Given, When, Then, And, world
 from mr_repo.repossesser import Repossesser
-import os
 import git
 import tempfile
 import copy
