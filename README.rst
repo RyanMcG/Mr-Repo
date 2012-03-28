@@ -104,3 +104,4 @@ TO DO
 *   Add depth parameter to ``update`` to enable configuration of max depth.
 *   Create a MrRepoRepo wrapper class for use in MrRepo instead of calling
     git.Repo directly
+    *   Support the following formats: Git (done), Hg, MrRepo, Folder
