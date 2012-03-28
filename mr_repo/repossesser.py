@@ -206,8 +206,9 @@ class Repossesser(object):
     @classmethod
     def find_repos(cls, start_path, max_depth=4):
         found_repos = []
-        if max_depth >= 0:
-            (base_path, directories, filenames) = os.walk(start_path).next()
+        if max_depth > 0:
+            (base_path, directories, filenames) = os.walk(start_path,
+                    followlinks=True).next()
             for directory in directories:
                 directory = os.path.join(start_path, directory)
                 directory_repo = cls._get_repo(directory)
@@ -228,14 +229,25 @@ class Repossesser(object):
             return False
 
     def setup_files(self):
-        self.config_path = os.path.join(self.args.dir, self._config_file_name)
-        self.repo_file_path = os.path.join(self.args.dir, self._repo_file_name)
-        if not os.path.isfile(self.config_path):
-            self.config_file = file(self.config_path, 'w')
-        self.config_file = file(self.config_path, 'r+')
-        if not os.path.isfile(self.repo_file_path):
-            self.repo_file = file(self.repo_file_path, 'w')
-        self.repo_file = file(self.repo_file_path, 'r+')
+        temp_config_path = os.path.join(self.args.dir, self._config_file_name)
+        temp_repo_file_path = os.path.join(self.args.dir, self._repo_file_name)
+
+        # If the config files do not exist, create them
+        if not os.path.isfile(temp_config_path):
+            open(temp_config_path, 'w')
+        if not os.path.isfile(temp_repo_file_path):
+            open(temp_repo_file_path, 'w')
+
+        # Follow the link if it exists
+        self.config_path = temp_config_path if \
+                (not os.path.islink(temp_config_path)) else \
+                os.readlink(temp_config_path)
+        self.repo_file_path = temp_repo_file_path if \
+                (not os.path.islink(temp_repo_file_path)) else \
+                os.readlink(temp_repo_file_path)
+
+        self.config_file = open(self.config_path, 'r+')
+        self.repo_file = open(self.repo_file_path, 'r+')
 
     def read_config(self, check=True):
         """Read `.mr_repo.yml` and `.this_repo` files to determine state the of
