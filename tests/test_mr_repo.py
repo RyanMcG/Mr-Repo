@@ -236,7 +236,7 @@ class RepossesserStories(TestCase):
         repo_path = os.path.join(current_dir, repo_name)
 
         And.I_have_a_git_repository_called(repo_path)
-        When.I_have_a_Mr_Repo_repository(clean=True)
+        When.I_create_a_Mr_Repo_repository(clean=True)
         And.I_execute_the_following_input("update")
         Then.I_have_updated_config_files(
                 config_check=RepossesserStories.__config_has_new_repo(
