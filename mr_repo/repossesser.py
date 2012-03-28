@@ -84,6 +84,15 @@ class Repossesser(object):
     def __setup_parser(self):
         self.parser.add_argument('--version', action='version',
                 version="Mr. Repo " + version)
+
+        self.parser._config_file_name = self._config_file_name
+        self.parser.add_argument('--verbose', '-v', dest="verbose",
+                default=False,
+                help='Run this command verbosely to show debug output.',
+                action='store_true')
+        self.parser.add_argument('--dir', '-d', dest="dir", default='.',
+                help='The Mr. Repo directory being worked on.',
+                action=_MrRepoDirAction)
         subparsers = self.parser.add_subparsers(
                 title='Commands',
                 description='Valid Mr. Repo commands:',
