@@ -176,24 +176,20 @@ class Repossesser(object):
 
     def __path(self, spath):
         extra = " so it cannot be added to Mr. Repo."
-        try:
-            apath = os.path.normpath(spath)
-            if not os.path.isdir(apath):
-                raise ArgumentTypeError("%s is not a directory" % spath +
-                        extra)
-            if self._get_repo(apath) == None:
-                raise ArgumentTypeError("%s is not valid repository" % spath +
-                        extra)
-        except Exception as inst:
-            print("ERROR: " + inst.message)
-
+        apath = os.path.normpath(spath)
+        if not os.path.isdir(apath):
+            raise ArgumentTypeError("%s is not a directory" % spath +
+                    extra)
+        if self._get_repo(apath) == None:
+            raise ArgumentTypeError("%s is not a valid repository" % spath +
+                    extra)
         return apath
 
     # Pseudo private functions
 
     def _debug(self, debugging_info):
         if self.verbose:
-            print(str(debugging_info))
+            print("DEBUG: " + str(debugging_info))
 
     @classmethod
     def _get_repo(cls, apath):
@@ -348,27 +344,32 @@ class Repossesser(object):
     def add_command(self, path=None):
         """Add a definition of a local repository to the Mr. Repo
         repository."""
-        path = path or self.args.path
-        repo_name = os.path.basename(path)
+        # Path relative to CWD
+        cur_rel_path = os.path.normpath(path or self.args.path)
+        # Path relative to Mr. Repo directory
+        mr_rel_path = os.path.relpath(cur_rel_path, self.args.dir)
+
+        repo_name = os.path.basename(mr_rel_path)
+
         if not self.is_conrtolled_repo(repo_name):
-            rep = self._get_repo(path)
+            rep = self._get_repo(cur_rel_path)
             if rep != None:
-                self.repos.append(os.path.basename(path))
+                self.repos.append(os.path.basename(repo_name))
                 if len(rep.remotes) > 0:
                     repo_dict = {repo_name: {'type': 'Git',
-                        'remote': rep.remote().url, 'path': path}}
+                        'remote': rep.remote().url, 'path': mr_rel_path}}
                 else:
-                    repo_dict = {repo_name: {'type': 'Git', 'path': path}}
-                self._debug(repo_dict)
+                    repo_dict = {repo_name: {'type': 'Git', 'path': mr_rel_path}}
+                self._debug("Adding to config: " + str(repo_dict))
                 self.config.get('repos').update(repo_dict)
                 self.write_config()
                 result = "Successfully added '%s' to Mr. Repo." % repo_name
             else:
-                result = "ERROR: %s is not a not a supported repository." % \
-                        path
+                result = "ERROR: %s is not a supported repository." % \
+                        cur_rel_path
         else:
-            result = ("ERROR: %s already in %s (i.e. controlled by Mr. "
-                    "Repo).") % (repo_name, self._config_file_name)
+            result = ("ERROR: %s is already controlled by Mr. Repo (i.e "
+                    "it is in %s).") % (repo_name, self._config_file_name)
         return result
 
     def rm_command(self):
@@ -428,10 +429,10 @@ class Repossesser(object):
             if 'remote' in self.config['repos'][name]:
                 remote = self.config['repos'][name]['remote']
                 repo_type = self.config['repos'][name]['type']
-                repo_path = self.config['repos'][name]['path']
+                repo_path = os.relpath(os.path.join(self.args.dir,
+                        self.config['repos'][name]['path'] or name))
                 if repo_type == "Git":
-                    new_repo = git.Repo.clone_from(remote, repo_path or
-                            self.os.path.join(self.args.dir, name))
+                    new_repo = git.Repo.clone_from(remote, repo_path)
                     self.repos.append(name)
                     ret = "Successfully cloned '%s' into '%s'." % (name,
                         new_repo.working_dir)
@@ -453,8 +454,8 @@ class Repossesser(object):
         name = self.check_repo_name(self.args.name)
 
         if name and name in self.repos:
-            repo_path = self.config['repos'][name]['path'] or \
-                    os.path.join(self.args.dir, name)
+            repo_path = os.path.relpath(os.path.join(self.args.dir,
+                    self.config['repos'][name]['path'] or name))
             repo_type = self.config['repos'][name]['type']
             ret = "Successfully removed the local copy of '%s'." % name
             # Check that it is a Git repo
