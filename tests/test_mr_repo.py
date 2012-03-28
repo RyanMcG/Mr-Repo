@@ -34,7 +34,7 @@ def clone_state(mr_repo):
 
 
 @step
-def I_have_a_Mr_Repo_repository(execute=True, clean=False):
+def I_create_a_Mr_Repo_repository(execute=True, clean=False):
     """Creates a Mr. Repo repository and stores the inital state."""
     args = ['init', '-d', world.tdir]
     if clean:
@@ -207,7 +207,7 @@ class RepossesserStories(TestCase):
         """Adding a valid directory/repo works."""
         repo_name = "Shoes"
         Given.I_have_a_git_repository_called(repo_name)
-        And.I_have_a_Mr_Repo_repository(clean=True)
+        And.I_create_a_Mr_Repo_repository(clean=True)
         When.I_add_the_repository(world.repos[0].working_dir)
         Then.I_have_updated_config_files(
                 config_check=RepossesserStories.__config_has_new_repo(

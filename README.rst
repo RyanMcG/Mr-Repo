@@ -107,8 +107,8 @@ TO DO
 *   Change ``--current-only`` to ``--controlled``. This option should only
     update (add to ``.this_repo``) repositories already referenced in
     ``.mr_repo.yml``.
-
 *   Print debugging/process information when ``--verbose`` option is present.
+*   Support adding/removing/getting/ungetting multiple repositories at once.
 *   Create a MrRepoRepo wrapper class for use in MrRepo instead of calling
     git.Repo directly
     *   Support the following formats: Git (done), Hg, MrRepo, Folder
