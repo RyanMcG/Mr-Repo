@@ -101,6 +101,7 @@ TO DO
 ~~~~~
 
 *   Update this file.
+*   Resolve naming conflicts instead of overwriting.
 *   Add depth parameter to ``update`` to enable configuration of max depth.
 *   Add ``--force`` option to ``update``. Forces update of configuration instead
     of ignoring existing.
