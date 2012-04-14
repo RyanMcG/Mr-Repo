@@ -359,7 +359,9 @@ class Repossesser(object):
                     repo_dict = {repo_name: {'type': 'Git',
                         'remote': rep.remote().url, 'path': mr_rel_path}}
                 else:
-                    repo_dict = {repo_name: {'type': 'Git', 'path': mr_rel_path}}
+                    repo_dict = {
+                            repo_name: {
+                                'type': 'Git', 'path': mr_rel_path}}
                 self._debug("Adding to config: " + str(repo_dict))
                 self.config.get('repos').update(repo_dict)
                 self.write_config()
@@ -429,7 +431,7 @@ class Repossesser(object):
             if 'remote' in self.config['repos'][name]:
                 remote = self.config['repos'][name]['remote']
                 repo_type = self.config['repos'][name]['type']
-                repo_path = os.relpath(os.path.join(self.args.dir,
+                repo_path = os.path.relpath(os.path.join(self.args.dir,
                         self.config['repos'][name]['path'] or name))
                 if repo_type == "Git":
                     new_repo = git.Repo.clone_from(remote, repo_path)
