@@ -105,6 +105,7 @@ TO DO
 *   Add depth parameter to ``update`` to enable configuration of max depth.
 *   Add ``--force`` option to ``update``. Forces update of configuration instead
     of ignoring existing.
+*   Fallback to remotes not named ``origin``.
 *   Change ``--current-only`` to ``--controlled``. This option should only
     update (add to ``.this_repo``) repositories already referenced in
     ``.mr_repo.yml``.
