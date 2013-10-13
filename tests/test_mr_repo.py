@@ -3,7 +3,7 @@
 Uses pea as a simple BDD framework around nose to make testing nicer. To run
 the tests use nose (and rednose if you want nice color):
 
-    nosetest --rednose -v
+    nosetests --rednose -v
 """
 # Author: Ryan McGowan
 
