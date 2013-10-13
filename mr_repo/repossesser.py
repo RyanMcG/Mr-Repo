@@ -219,7 +219,7 @@ class Repossesser(object):
 
     def check_repo_name(self, name):
         repo_name = os.path.basename(os.path.normpath(name))
-        if self.is_conrtolled_repo(repo_name):
+        if self.is_controlled_repo(repo_name):
             return repo_name
         else:
             return False
@@ -251,7 +251,7 @@ class Repossesser(object):
         self.config_file.seek(0)
         self.config = yaml.load(self.config_file)
         self.repo_file.seek(0)
-        self.repos = filter(self.is_conrtolled_repo, [repo.rstrip() for repo in
+        self.repos = filter(self.is_controlled_repo, [repo.rstrip() for repo in
             self.repo_file.readlines()])
         if check:
             self.check_config()
@@ -306,7 +306,7 @@ class Repossesser(object):
             print(str(self.args))
             exit(2)
 
-    def is_conrtolled_repo(self, repo_str):
+    def is_controlled_repo(self, repo_str):
         """Function returns true if repo_str is a Mr. Repo controlled repo."""
         return repo_str in self.config.get('repos').keys()
 
@@ -351,7 +351,7 @@ class Repossesser(object):
 
         repo_name = os.path.basename(mr_rel_path)
 
-        if not self.is_conrtolled_repo(repo_name):
+        if not self.is_controlled_repo(repo_name):
             rep = self._get_repo(cur_rel_path)
             if rep != None:
                 self.repos.append(os.path.basename(repo_name))
@@ -484,7 +484,7 @@ class Repossesser(object):
         """Interprets Mr. Repo controlled directory and automatically updates
         tracking files based on its findings."""
         start_len = len(self.repos)
-        repos = filter(lambda x: not self.is_conrtolled_repo(x),
+        repos = filter(lambda x: not self.is_controlled_repo(x),
                 self.find_repos(self.args.dir if not hasattr(self.args, 'path')
                     else self.args.path))
 
