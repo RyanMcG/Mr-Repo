@@ -81,10 +81,10 @@ in your current directory.
 To determine what repos you have just use the ``list`` command. By default the
 list command outputs a list of currently available repos. Using the ``-a`` flag
 also displays information about unavailable repos (i.e. repos that are not
-currently set up in the CWD). As you might expect the ``-n`` flag can be used to
+currently set up in the CWD). As you might expect the ``-u`` flag can be used to
 display repos that are not currently available. ::
 
-    mr_repo list [-a | --all] [-n | --not-available]
+    mr_repo list [-a | --all] [-u | --unavailable]
 
 Once you know what repos are or are not currently available you can
 ``get``/``unget`` them. ::
